@@ -25,18 +25,18 @@
 
         /* Lado Izquierdo: Info de la Clase */
         #left-panel {
-            flex: 0 0 40%;
+            flex: 0 0 35%;
             height: 100%;
             background-color: #1e293b;
             border-right: 5px solid #334155;
-            padding: 4vw;
+            padding: 3vw;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
         }
 
         #block-title {
-            font-size: 5vw;
+            font-size: 3.5vw;
             font-weight: bold;
             color: #e2e8f0;
             margin-bottom: 0.5vh;
@@ -44,22 +44,25 @@
         }
 
         #block-subtitle {
-            font-size: 2.5vw;
+            font-size: 1.8vw;
             color: #94a3b8;
-            margin-bottom: 4vh;
+            margin-bottom: 2vh;
             padding-bottom: 2vh;
             border-bottom: 2px solid #334155;
         }
 
         #exercise-list {
-            font-size: 3.5vw;
+            font-size: 2vw;
             color: #cbd5e1;
             line-height: 1.4;
             flex-grow: 1;
+            overflow-y: auto;
         }
 
         .exercise-item {
-            margin-bottom: 2vh;
+            margin-bottom: 1.5vh;
+            word-wrap: break-word;
+            /* Prevents long words from overflowing */
         }
 
         /* Lado Derecho: Cronómetro Gigante */
@@ -72,21 +75,27 @@
             align-items: center;
             background-color: #000000;
             transition: background-color 0.3s;
+            padding: 2vw;
+            box-sizing: border-box;
         }
 
         #status-text {
-            font-size: 5vw;
+            font-size: 3vw;
             font-weight: bold;
             color: #94a3b8;
             text-transform: uppercase;
-            letter-spacing: 0.5vw;
+            letter-spacing: 0.2vw;
             margin-bottom: 2vh;
             text-align: center;
+            width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         #timer {
-            font-size: 25vw;
-            /* Reducido para que entre perfecto en el 60% restante de la pantalla */
+            font-size: 20vw;
+            /* Reducido para que entre perfecto en el 65% restante de la pantalla */
             font-weight: bold;
             color: #ccff00;
             /* Amarillo flúor por defecto */
