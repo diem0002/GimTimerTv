@@ -67,6 +67,18 @@ function App() {
         saveBlocksToDb(newB);
     };
 
+    const handleSelectBlock = async (index) => {
+        if (!dbState?.id) return;
+        await supabase.from('wod_status').update({
+            current_block_index: index,
+            estado_actual: 'STOPPED',
+            is_running: false,
+            start_timestamp: null,
+            target_timestamp: null,
+            tiempo_pausado_restante: null
+        }).eq('id', dbState.id);
+    };
+
     if (loading) return <div className="p-8 text-center">Cargando conexión a Box...</div>;
 
     return (
@@ -98,6 +110,11 @@ function App() {
                                 </div>
                             </div>
                             <div className="flex gap-2">
+                                {dbState?.current_block_index !== i && (
+                                    <button onClick={() => handleSelectBlock(i)} className="text-green-400 bg-slate-900 px-3 py-1 rounded text-sm hover:bg-slate-700 font-bold transition-colors">
+                                        ▶ FIJAR
+                                    </button>
+                                )}
                                 <button onClick={() => handleEditBlock(i)} className="text-blue-400 bg-slate-900 px-3 py-1 rounded text-sm hover:bg-slate-700">✎</button>
                                 <button onClick={() => handleDeleteBlock(i)} className="text-red-400 bg-slate-900 px-3 py-1 rounded text-sm hover:bg-slate-700">X</button>
                             </div>
