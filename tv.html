@@ -75,7 +75,7 @@
         }
 
         #status-text {
-            font-size: 6vw;
+            font-size: 5vw;
             font-weight: bold;
             color: #94a3b8;
             text-transform: uppercase;
@@ -85,14 +85,18 @@
         }
 
         #timer {
-            font-size: 38vw;
-            /* Super grande */
+            font-size: 25vw;
+            /* Reducido para que entre perfecto en el 60% restante de la pantalla */
             font-weight: bold;
             color: #ccff00;
             /* Amarillo flúor por defecto */
             text-align: center;
-            line-height: 1;
+            line-height: 0.8;
+            /* Ajuste de altura de línea para evitar corte superior/inferior */
             font-variant-numeric: tabular-nums;
+            width: 100%;
+            overflow: hidden;
+            white-space: nowrap;
         }
 
         /* Estados de Color */
