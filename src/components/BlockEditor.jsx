@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Save, X } from 'lucide-react';
 
-export default function BlockEditor({ onAdd }) {
+export default function BlockEditor({ onSave, editingBlock, onCancelEdit }) {
     const [nombre, setNombre] = useState('AMRAP / EMOM');
 
     // Trabajo
@@ -18,14 +18,36 @@ export default function BlockEditor({ onAdd }) {
     // Info
     const [ejercicios, setEjercicios] = useState('');
 
+    // Efecto para rellenar los datos cuando entra en modo Edición
+    useEffect(() => {
+        if (editingBlock) {
+            setNombre(editingBlock.nombre || '');
+            setRondas(editingBlock.rondas || 1);
+            setTrabajoMin(Math.floor((editingBlock.trabajo_seg || 0) / 60));
+            setTrabajoSeg((editingBlock.trabajo_seg || 0) % 60);
+            setDescansoMin(Math.floor((editingBlock.descanso_seg || 0) / 60));
+            setDescansoSeg((editingBlock.descanso_seg || 0) % 60);
+            setEjercicios(editingBlock.ejercicios || '');
+        } else {
+            // Reset
+            setNombre('AMRAP / EMOM');
+            setTrabajoMin(1);
+            setTrabajoSeg(0);
+            setDescansoMin(0);
+            setDescansoSeg(0);
+            setRondas(1);
+            setEjercicios('');
+        }
+    }, [editingBlock]);
+
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        onAdd({
+        onSave({
             nombre: nombre,
             rondas: parseInt(rondas) || 1,
-            trabajo_seg: (parseInt(trabajoMin) || 0) * 60 + (parseInt(trabajoSeg) || 0),
-            descanso_seg: (parseInt(descansoMin) || 0) * 60 + (parseInt(descansoSeg) || 0),
+            trabajo_seg: (parseInt(trabajoMin || 0)) * 60 + (parseInt(trabajoSeg || 0)),
+            descanso_seg: (parseInt(descansoMin || 0)) * 60 + (parseInt(descansoSeg || 0)),
             ejercicios: ejercicios || 'Empezar a trabajar' // Mostrar en la TV
         });
 
@@ -41,7 +63,7 @@ export default function BlockEditor({ onAdd }) {
 
     return (
         <form onSubmit={handleSubmit} className="bg-slate-800/50 border border-slate-700 rounded p-4">
-            <h3 className="text-lg font-semibold mb-3">Agregar Nuevo Bloque</h3>
+            <h3 className="text-lg font-semibold mb-3">{editingBlock ? 'Editar Bloque' : 'Agregar Nuevo Bloque'}</h3>
 
             <div className="space-y-3">
                 <div>
@@ -108,9 +130,17 @@ export default function BlockEditor({ onAdd }) {
                     />
                 </div>
 
-                <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded flex items-center justify-center gap-2 mt-2">
-                    <Plus size={18} /> AGREGAR A CLASE
-                </button>
+                <div className="flex gap-2 mt-2">
+                    <button type="submit" className={`flex-1 ${editingBlock ? 'bg-green-600 hover:bg-green-500' : 'bg-blue-600 hover:bg-blue-500'} text-white font-bold py-2 px-4 rounded flex items-center justify-center gap-2`}>
+                        {editingBlock ? <Save size={18} /> : <Plus size={18} />}
+                        {editingBlock ? 'ACTUALIZAR' : 'AGREGAR A CLASE'}
+                    </button>
+                    {editingBlock && (
+                        <button type="button" onClick={onCancelEdit} className="bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 px-4 rounded flex items-center justify-center gap-2">
+                            <X size={18} /> CANCELAR
+                        </button>
+                    )}
+                </div>
             </div>
         </form>
     );
