@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WOD TV</title>
+    <style>
+        /* Estilos CSS3 puros y High Contrast */
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            font-family: Arial, Helvetica, sans-serif; /* Sistema sans-serif (no google fonts consumiendo recursos) */
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden; /* Evita scrolls */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+        }
+
+        #block-info {
+            position: absolute;
+            top: 5vh;
+            font-size: 5vw;
+            color: #aaaaaa;
+            text-align: center;
+            width: 100%;
+        }
+
+        /* 45vw para máxima visibilidad en TV desde lejos */
+        #timer {
+            font-size: 45vw; 
+            font-weight: bold;
+            color: #ccff00; /* Amarillo flúor */
+            text-align: center;
+            line-height: 1;
+            margin: 10vh 0;
+        }
+
+        #next-exercise {
+            position: absolute;
+            bottom: 5vh;
+            font-size: 6vw;
+            color: #ffffff;
+            text-align: center;
+            width: 100%;
+        }
+
+        /* Overlay necesario para Android 4.4 que restringe Audio API sin interacción */
+        #overlay-start {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 8vw;
+            color: #00ff00;
+            cursor: pointer;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div id="overlay-start">TOCAR PARA INICIAR<br><span style="font-size:4vw">(Requiere toque en Android 4.4)</span></div>
+
+    <div id="block-info">ESPERANDO RED...</div>
+    <div id="timer">00:00</div>
+    <div id="next-exercise">---</div>
+
+    <script>
+        // --- 1. Audio Legacy (Requisito: destrabar con click) ---
+        var audioCtx = null;
+        var beepShort = null;
+        var beepLong = null;
+
+        // Función para sintetizar un beep simple evitando tener que hacer otro fetch
+        function createBeep(duration, freq) {
+            if (!audioCtx) return null;
+            var buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * duration, audioCtx.sampleRate);
+            var data = buffer.getChannelData(0);
+            for (var i = 0; i < data.length; i++) {
+                data[i] = Math.sin(2 * Math.PI * freq * (i / audioCtx.sampleRate));
+            }
+            return buffer;
+        }
+
+        function playBeep(buffer) {
+            if (!audioCtx || !buffer) return;
+            var source = audioCtx.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioCtx.destination);
+            source.start(0);
+        }
+
+        function initAudio() {
+            var AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) {
+                audioCtx = new AudioContext();
+                beepShort = createBeep(0.2, 800); 
+                beepLong = createBeep(0.8, 400);  
+            }
+            var overlay = document.getElementById('overlay-start');
+            if(overlay) overlay.style.display = 'none';
+        }
+
+        document.getElementById('overlay-start').addEventListener('click', initAudio);
+
+        // --- 2. Lógica del Cronómetro (Resiliente a LAG) ---
+        var timerEl = document.getElementById('timer');
+        var currentTargetTime = null; 
+        var timerInterval = null;
+
+        function formatTime(ms) {
+            if (ms <= 0) return "00:00";
+            var totalSegs = Math.floor(ms / 1000);
+            var mins = Math.floor(totalSegs / 60);
+            var segs = totalSegs % 60;
+            return (mins < 10 ? '0' : '') + mins + ':' + (segs < 10 ? '0' : '') + segs;
+        }
+
+        function updateTimer() {
+            if (!currentTargetTime) return;
+            var now = Date.now();
+            var diff = currentTargetTime - now; // Date.now() es inmune a lentitud de CPU local
+
+            // Logica simplificada para beeps (en ultimos 3 ruiditos)
+            if (diff > 0 && diff < 3100) {
+                // simple math para tocar cuando cambia el seg entero
+                var roundedDiff = diff / 1000;
+                var subSec = diff % 1000;
+                if (subSec > 800) { // Disparo aproximado en el cambio de segundo
+                    playBeep(beepShort);
+                }
+            }
+            if (diff <= 0) {
+                playBeep(beepLong);
+                clearInterval(timerInterval);
+                timerEl.innerHTML = "00:00";
+                return;
+            }
+            
+            timerEl.innerHTML = formatTime(diff);
+        }
+
+        // Exponemos la función window para ser llamada desde el modulo principal JS
+        window.setTimerTarget = function(targetMs) {
+            currentTargetTime = targetMs;
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(updateTimer, 200); // 200ms no agota RAM/CPU en KitKat
+        };
+
+        // --- 3. Registrar Service Worker para Offline Fallback ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js').then(function(registration) {
+                    console.log('SW cache ready.');
+                }, function(err) {
+                    console.warn('SW failed.', err);
+                });
+            });
+        }
+    </script>
+    <!-- Módulo Supabase que Vite transformará para ES5 usando plugin-legacy -->
+    <script type="module" src="./main.js"></script>
+</body>
+</html>
