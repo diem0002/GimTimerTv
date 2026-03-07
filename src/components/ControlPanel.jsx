@@ -87,10 +87,12 @@ export default function ControlPanel({ dbState, sessionData }) {
     };
 
     // Util: Calculamos la duración total teórica del bloque (Trabajo + Descanso) x Rondas
-    // Restamos el último descanso porque no se descansa al final del bloque por lo general, pero como es light logic, sumamos todo.
+    // Restamos el último descanso porque no se descansa al final del bloque.
     const getTotalBlockTime = () => {
         if (!currentBlock) return 0;
-        return ((currentBlock.trabajo_seg || 0) + (currentBlock.descanso_seg || 0)) * (currentBlock.rondas || 1) * 1000;
+        const totalConDescanso = ((currentBlock.trabajo_seg || 0) + (currentBlock.descanso_seg || 0)) * (currentBlock.rondas || 1);
+        const duracionReal = totalConDescanso - (currentBlock.descanso_seg || 0); // Omitimos el último descanso
+        return duracionReal * 1000;
     };
 
     return (

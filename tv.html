@@ -110,16 +110,17 @@
 
         /* Estados de Color */
         .state-descanso #right-panel {
-            background-color: #7f1d1d;
+            background-color: #0c4a6e;
+            /* Azul profundo/Celeste oscuro */
         }
 
-        /* Rojo oscuro para descanso */
         .state-descanso #timer {
-            color: #fca5a5;
+            color: #38bdf8;
+            /* Celeste flúor */
         }
 
         .state-descanso #status-text {
-            color: #fecaca;
+            color: #bae6fd;
         }
 
         .state-pausa #timer {
@@ -247,6 +248,9 @@
             var nowServer = Date.now() + serverTimeOffset; // Hora "perfecta"
             var startServer = new Date(currentWodState.start_timestamp).getTime();
 
+            // Añadimos 3 segundos de gracia al inicio (Countdown)
+            var countdownMs = 3000;
+
             var elapsedMs;
 
             if (currentWodState.estado_actual === 'PAUSED') {
@@ -258,7 +262,29 @@
                 elapsedMs = blockTotalMs - currentWodState.tiempo_pausado_restante;
             } else {
                 // ESTADO: RUNNING
-                elapsedMs = nowServer - startServer;
+                // ElapsedMs en verde es negativo durante el countdown
+                elapsedMs = nowServer - startServer - countdownMs;
+            }
+
+            if (elapsedMs < 0) {
+                // ESTAMOS EN COUNTDOWN INICIAL DE 3 SEGUNDOS
+                var timeLeftMs = Math.abs(elapsedMs);
+                bodyEl.className = 'state-descanso'; // Usamos el celeste para preparar
+                statusEl.innerHTML = 'PREPARADOS';
+
+                if (currentWodState.estado_actual === 'RUNNING') {
+                    var secondsLeft = Math.ceil(timeLeftMs / 1000);
+                    if (secondsLeft !== lastSecondsLeft) {
+                        if (secondsLeft <= 3 && secondsLeft > 0) {
+                            playBeep(beepShort);
+                        } else if (secondsLeft === 0) {
+                            playBeep(beepLong); // Go!
+                        }
+                        lastSecondsLeft = secondsLeft;
+                    }
+                }
+                timerEl.innerHTML = formatTime(timeLeftMs);
+                return;
             }
 
             // Calcular en qué parte del TIMELINE estamos usando solo Matemáticas simples (O(1))
@@ -271,7 +297,19 @@
             var rondaIndex = Math.floor(elapsedMs / rondaTotalMs);
             var totalRondas = currentBlock.rondas || 1;
 
+            var timeInCurrentRonda = elapsedMs % rondaTotalMs;
+            var isWork = timeInCurrentRonda < trabajoMs;
+
+            // Lógica de Fin de Bloque (si terminó la última ronda de trabajo, YA terminou)
+            var isFinished = false;
             if (rondaIndex >= totalRondas) {
+                isFinished = true;
+            } else if (rondaIndex === totalRondas - 1 && !isWork) {
+                // Si estamos en la última ronda y ya pasó el tiempo de trabajo, no hay descanso final, se terminó el bloque.
+                isFinished = true;
+            }
+
+            if (isFinished) {
                 // TERMINÓ EL BLOQUE ENTERO
                 if (lastSecondsLeft !== 0) {
                     playBeep(beepLong); // Beep final fuerte
@@ -282,9 +320,6 @@
                 timerEl.innerHTML = "00:00";
                 return;
             }
-
-            var timeInCurrentRonda = elapsedMs % rondaTotalMs;
-            var isWork = timeInCurrentRonda < trabajoMs;
 
             var timeLeftMs;
             if (isWork) {
