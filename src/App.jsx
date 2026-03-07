@@ -7,6 +7,7 @@ function App() {
     const [dbState, setDbState] = useState(null);
     const [sessionData, setSessionData] = useState({ bloques: [] });
     const [loading, setLoading] = useState(true);
+    const [editingIndex, setEditingIndex] = useState(null);
 
     // Inicializar y suscribirse a Supabase
     useEffect(() => {
@@ -45,8 +46,19 @@ function App() {
         }
     };
 
-    const handleAddBlock = (block) => {
-        saveBlocksToDb([...sessionData.bloques, block]);
+    const handleSaveBlock = (block) => {
+        const newBlocks = [...sessionData.bloques];
+        if (editingIndex !== null) {
+            newBlocks[editingIndex] = block;
+            setEditingIndex(null);
+        } else {
+            newBlocks.push(block);
+        }
+        saveBlocksToDb(newBlocks);
+    };
+
+    const handleEditBlock = (index) => {
+        setEditingIndex(index);
     };
 
     const handleDeleteBlock = (index) => {
@@ -85,7 +97,10 @@ function App() {
                                     {b.rondas}x {Math.floor(b.trabajo_seg / 60)}:{(b.trabajo_seg % 60).toString().padStart(2, '0')} (Desc: {Math.floor(b.descanso_seg / 60)}:{(b.descanso_seg % 60).toString().padStart(2, '0')})
                                 </div>
                             </div>
-                            <button onClick={() => handleDeleteBlock(i)} className="text-red-400 bg-slate-900 px-3 py-1 rounded text-sm hover:bg-slate-700">X</button>
+                            <div className="flex gap-2">
+                                <button onClick={() => handleEditBlock(i)} className="text-blue-400 bg-slate-900 px-3 py-1 rounded text-sm hover:bg-slate-700">✎</button>
+                                <button onClick={() => handleDeleteBlock(i)} className="text-red-400 bg-slate-900 px-3 py-1 rounded text-sm hover:bg-slate-700">X</button>
+                            </div>
                         </div>
                     ))}
                     {sessionData.bloques.length === 0 && (
@@ -93,7 +108,11 @@ function App() {
                     )}
                 </div>
 
-                <BlockEditor onAdd={handleAddBlock} />
+                <BlockEditor
+                    onSave={handleSaveBlock}
+                    editingBlock={editingIndex !== null ? sessionData.bloques[editingIndex] : null}
+                    onCancelEdit={() => setEditingIndex(null)}
+                />
             </div>
         </div>
     )
