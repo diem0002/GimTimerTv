@@ -16,12 +16,14 @@ export default function ControlPanel({ dbState, sessionData }) {
             estado_actual: 'RUNNING'
         };
 
+        const COUNTDOWN_MS = 3000; // 3 Segundos de preparación universal
+
         if (estadoActual === 'PAUSED' && dbState.tiempo_pausado_restante) {
             // Reanudamos desde la pausa
-            payload.start_timestamp = new Date(now.getTime() - (getTotalBlockTime() - dbState.tiempo_pausado_restante)).toISOString();
+            payload.start_timestamp = new Date(now.getTime() + COUNTDOWN_MS - (getTotalBlockTime() - dbState.tiempo_pausado_restante)).toISOString();
         } else {
             // Empezar de cero
-            payload.start_timestamp = now.toISOString();
+            payload.start_timestamp = new Date(now.getTime() + COUNTDOWN_MS).toISOString();
             payload.tiempo_pausado_restante = null;
         }
 
@@ -61,10 +63,11 @@ export default function ControlPanel({ dbState, sessionData }) {
     const handleRestart = async () => {
         if (!currentBlock) return;
         const now = new Date();
+        const COUNTDOWN_MS = 3000;
         await supabase.from('wod_status').update({
             is_running: true,
             estado_actual: 'RUNNING',
-            start_timestamp: now.toISOString(),
+            start_timestamp: new Date(now.getTime() + COUNTDOWN_MS).toISOString(),
             target_timestamp: null,
             tiempo_pausado_restante: null
         }).eq('id', dbState.id);
