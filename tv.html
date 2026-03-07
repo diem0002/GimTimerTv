@@ -224,7 +224,7 @@
 
         function formatTime(ms) {
             if (ms <= 0) return "00:00";
-            var totalSegs = Math.floor(ms / 1000);
+            var totalSegs = Math.ceil(ms / 1000);
             var mins = Math.floor(totalSegs / 60);
             var segs = totalSegs % 60;
             return (mins < 10 ? '0' : '') + mins + ':' + (segs < 10 ? '0' : '') + segs;
@@ -334,7 +334,7 @@
 
             // Beeps Lógica (solo en estado RUNNING)
             if (currentWodState.estado_actual === 'RUNNING') {
-                var secondsLeft = Math.floor(timeLeftMs / 1000);
+                var secondsLeft = Math.ceil(timeLeftMs / 1000);
                 if (secondsLeft !== lastSecondsLeft) {
                     if (secondsLeft <= 3 && secondsLeft > 0) {
                         playBeep(beepShort);
