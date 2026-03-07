@@ -1,93 +1,174 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>WOD TV</title>
     <style>
-        /* Estilos CSS3 puros y High Contrast */
+        /* Estilos CSS3 puros, compatibles con Android 4.4 Chrome 30 */
         body {
-            background-color: #000000;
+            background-color: #0f172a;
+            /* un negro un poco mas azulado y elegante */
             color: #ffffff;
-            font-family: Arial, Helvetica, sans-serif; /* Sistema sans-serif (no google fonts consumiendo recursos) */
+            font-family: Arial, Helvetica, sans-serif;
             margin: 0;
             padding: 0;
             height: 100vh;
             width: 100vw;
-            overflow: hidden; /* Evita scrolls */
+            overflow: hidden;
+            display: flex;
+            flex-direction: row;
+            /* Split Screen Horizontal */
+            user-select: none;
+        }
+
+        /* Lado Izquierdo: Info de la Clase */
+        #left-panel {
+            flex: 0 0 40%;
+            height: 100%;
+            background-color: #1e293b;
+            border-right: 5px solid #334155;
+            padding: 4vw;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #block-title {
+            font-size: 5vw;
+            font-weight: bold;
+            color: #e2e8f0;
+            margin-bottom: 0.5vh;
+            text-transform: uppercase;
+        }
+
+        #block-subtitle {
+            font-size: 2.5vw;
+            color: #94a3b8;
+            margin-bottom: 4vh;
+            padding-bottom: 2vh;
+            border-bottom: 2px solid #334155;
+        }
+
+        #exercise-list {
+            font-size: 3.5vw;
+            color: #cbd5e1;
+            line-height: 1.4;
+            flex-grow: 1;
+        }
+
+        .exercise-item {
+            margin-bottom: 2vh;
+        }
+
+        /* Lado Derecho: Cronómetro Gigante */
+        #right-panel {
+            flex: 1;
+            height: 100%;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            user-select: none;
+            background-color: #000000;
+            transition: background-color 0.3s;
         }
 
-        #block-info {
-            position: absolute;
-            top: 5vh;
-            font-size: 5vw;
-            color: #aaaaaa;
-            text-align: center;
-            width: 100%;
-        }
-
-        /* 45vw para máxima visibilidad en TV desde lejos */
-        #timer {
-            font-size: 45vw; 
+        #status-text {
+            font-size: 6vw;
             font-weight: bold;
-            color: #ccff00; /* Amarillo flúor */
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5vw;
+            margin-bottom: 2vh;
+            text-align: center;
+        }
+
+        #timer {
+            font-size: 38vw;
+            /* Super grande */
+            font-weight: bold;
+            color: #ccff00;
+            /* Amarillo flúor por defecto */
             text-align: center;
             line-height: 1;
-            margin: 10vh 0;
+            font-variant-numeric: tabular-nums;
         }
 
-        #next-exercise {
-            position: absolute;
-            bottom: 5vh;
-            font-size: 6vw;
-            color: #ffffff;
-            text-align: center;
-            width: 100%;
+        /* Estados de Color */
+        .state-descanso #right-panel {
+            background-color: #7f1d1d;
         }
 
-        /* Overlay necesario para Android 4.4 que restringe Audio API sin interacción */
+        /* Rojo oscuro para descanso */
+        .state-descanso #timer {
+            color: #fca5a5;
+        }
+
+        .state-descanso #status-text {
+            color: #fecaca;
+        }
+
+        .state-pausa #timer {
+            color: #fde047;
+            opacity: 0.5;
+        }
+
+        .state-pausa #status-text {
+            color: #fde047;
+        }
+
+        /* Overlay Inicio */
         #overlay-start {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(0,0,0,0.9);
+            background: rgba(0, 0, 0, 0.95);
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             font-size: 8vw;
-            color: #00ff00;
+            color: #ccff00;
+            font-weight: bold;
             cursor: pointer;
             z-index: 1000;
         }
     </style>
 </head>
-<body>
-    <div id="overlay-start">TOCAR PARA INICIAR<br><span style="font-size:4vw">(Requiere toque en Android 4.4)</span></div>
 
-    <div id="block-info">ESPERANDO RED...</div>
-    <div id="timer">00:00</div>
-    <div id="next-exercise">---</div>
+<body>
+    <div id="overlay-start">
+        TOCAR PARA INICIAR<br>
+        <span style="font-size:3vw; color: #94a3b8; margin-top:2vh">(Sincronizando reloj de servidor...)</span>
+    </div>
+
+    <!-- PANTALLA DIVIDIDA -->
+    <div id="left-panel">
+        <div id="block-title">ESPERANDO...</div>
+        <div id="block-subtitle">CONECTANDO A SUPABASE</div>
+        <div id="exercise-list"></div>
+    </div>
+
+    <div id="right-panel">
+        <div id="status-text">LISTO</div>
+        <div id="timer">00:00</div>
+    </div>
 
     <script>
-        // --- 1. Audio Legacy (Requisito: destrabar con click) ---
+        // --- 1. Audio Legacy ---
         var audioCtx = null;
-        var beepShort = null;
-        var beepLong = null;
+        var beepShort = null, beepLong = null, beepRest = null;
 
-        // Función para sintetizar un beep simple evitando tener que hacer otro fetch
-        function createBeep(duration, freq) {
+        function createBeep(duration, freq, type) {
             if (!audioCtx) return null;
             var buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * duration, audioCtx.sampleRate);
             var data = buffer.getChannelData(0);
             for (var i = 0; i < data.length; i++) {
-                data[i] = Math.sin(2 * Math.PI * freq * (i / audioCtx.sampleRate));
+                // Onda cuadrada simple suena más fuerte en TV
+                data[i] = Math.sin(2 * Math.PI * freq * (i / audioCtx.sampleRate)) > 0 ? 0.5 : -0.5;
             }
             return buffer;
         }
@@ -104,19 +185,28 @@
             var AudioContext = window.AudioContext || window.webkitAudioContext;
             if (AudioContext) {
                 audioCtx = new AudioContext();
-                beepShort = createBeep(0.2, 800); 
-                beepLong = createBeep(0.8, 400);  
+                beepShort = createBeep(0.2, 1000);
+                beepLong = createBeep(0.8, 800);
+                beepRest = createBeep(0.4, 400); // Sonido mas grave para el final del descanso
             }
             var overlay = document.getElementById('overlay-start');
-            if(overlay) overlay.style.display = 'none';
+            if (overlay) overlay.style.display = 'none';
         }
 
         document.getElementById('overlay-start').addEventListener('click', initAudio);
 
-        // --- 2. Lógica del Cronómetro (Resiliente a LAG) ---
+        // --- 2. Lógica de Reloj Sincronizado (Servidor vs Local) ---
+        var serverTimeOffset = 0; // LocalTime + Offset = ServerTime
+        var hasSynced = false;
+
+        // --- 3. Motor del Cronómetro de Rondas ---
         var timerEl = document.getElementById('timer');
-        var currentTargetTime = null; 
+        var statusEl = document.getElementById('status-text');
+        var bodyEl = document.body;
+
         var timerInterval = null;
+        var currentWodState = null; // Guardará el objeto de estado completo
+        var currentBlock = null;
 
         function formatTime(ms) {
             if (ms <= 0) return "00:00";
@@ -126,49 +216,140 @@
             return (mins < 10 ? '0' : '') + mins + ':' + (segs < 10 ? '0' : '') + segs;
         }
 
-        function updateTimer() {
-            if (!currentTargetTime) return;
-            var now = Date.now();
-            var diff = currentTargetTime - now; // Date.now() es inmune a lentitud de CPU local
+        var lastSecondsLeft = -1;
 
-            // Logica simplificada para beeps (en ultimos 3 ruiditos)
-            if (diff > 0 && diff < 3100) {
-                // simple math para tocar cuando cambia el seg entero
-                var roundedDiff = diff / 1000;
-                var subSec = diff % 1000;
-                if (subSec > 800) { // Disparo aproximado en el cambio de segundo
-                    playBeep(beepShort);
-                }
+        function updateTimer() {
+            if (!currentWodState || !currentBlock) return;
+
+            // ESTADO: STOPPED
+            if (currentWodState.estado_actual === 'STOPPED') {
+                bodyEl.className = '';
+                statusEl.innerHTML = 'ESPERANDO INICIO';
+                timerEl.innerHTML = "00:00";
+                lastSecondsLeft = -1;
+                return;
             }
-            if (diff <= 0) {
-                playBeep(beepLong);
-                clearInterval(timerInterval);
+
+            // MÁQUINA DE TIEMPO ABSOLUTA
+            var nowServer = Date.now() + serverTimeOffset; // Hora "perfecta"
+            var startServer = new Date(currentWodState.start_timestamp).getTime();
+
+            var elapsedMs;
+
+            if (currentWodState.estado_actual === 'PAUSED') {
+                // ESTADO: PAUSED
+                bodyEl.className = 'state-pausa';
+                statusEl.innerHTML = 'PAUSA';
+                // Si esta pausado, el tiempo transcurrido es el total menos el tiempo pausado restante
+                var blockTotalMs = ((currentBlock.trabajo_seg || 0) + (currentBlock.descanso_seg || 0)) * (currentBlock.rondas || 1) * 1000;
+                elapsedMs = blockTotalMs - currentWodState.tiempo_pausado_restante;
+            } else {
+                // ESTADO: RUNNING
+                elapsedMs = nowServer - startServer;
+            }
+
+            // Calcular en qué parte del TIMELINE estamos usando solo Matemáticas simples (O(1))
+            var rondaTotalMs = ((currentBlock.trabajo_seg || 0) + (currentBlock.descanso_seg || 0)) * 1000;
+            var trabajoMs = (currentBlock.trabajo_seg || 0) * 1000;
+
+            if (elapsedMs < 0) elapsedMs = 0;
+
+            // Determinar Ronda Actual (Base 1)
+            var rondaIndex = Math.floor(elapsedMs / rondaTotalMs);
+            var totalRondas = currentBlock.rondas || 1;
+
+            if (rondaIndex >= totalRondas) {
+                // TERMINÓ EL BLOQUE ENTERO
+                if (lastSecondsLeft !== 0) {
+                    playBeep(beepLong); // Beep final fuerte
+                    lastSecondsLeft = 0;
+                }
+                bodyEl.className = '';
+                statusEl.innerHTML = 'TIEMPO TERMINADO';
                 timerEl.innerHTML = "00:00";
                 return;
             }
-            
-            timerEl.innerHTML = formatTime(diff);
+
+            var timeInCurrentRonda = elapsedMs % rondaTotalMs;
+            var isWork = timeInCurrentRonda < trabajoMs;
+
+            var timeLeftMs;
+            if (isWork) {
+                timeLeftMs = trabajoMs - timeInCurrentRonda;
+                bodyEl.className = '';
+                statusEl.innerHTML = 'RONDA ' + (rondaIndex + 1) + ' / ' + totalRondas;
+            } else {
+                timeLeftMs = rondaTotalMs - timeInCurrentRonda;
+                bodyEl.className = 'state-descanso';
+                statusEl.innerHTML = 'DESCANSO';
+            }
+
+            // Beeps Lógica (solo en estado RUNNING)
+            if (currentWodState.estado_actual === 'RUNNING') {
+                var secondsLeft = Math.floor(timeLeftMs / 1000);
+                if (secondsLeft !== lastSecondsLeft) {
+                    if (secondsLeft <= 3 && secondsLeft > 0) {
+                        playBeep(beepShort);
+                    } else if (secondsLeft === 0 && lastSecondsLeft === 1) {
+                        playBeep(isWork ? beepRest : beepLong); // Si termina trabajo viene desc (beep grave). Si termina desc viene trabajo (beep fuerte).
+                    }
+                    lastSecondsLeft = secondsLeft;
+                }
+            }
+
+            timerEl.innerHTML = formatTime(timeLeftMs);
         }
 
-        // Exponemos la función window para ser llamada desde el modulo principal JS
-        window.setTimerTarget = function(targetMs) {
-            currentTargetTime = targetMs;
-            if (timerInterval) clearInterval(timerInterval);
-            timerInterval = setInterval(updateTimer, 200); // 200ms no agota RAM/CPU en KitKat
+        // Bridge function para main.js
+        window.setTimelineState = function (state, block) {
+            currentWodState = state;
+            currentBlock = block;
+
+            // Dibujar panel izquierdo (no requiere un setInterval, solo se hace una vez)
+            if (block) {
+                document.getElementById('block-title').innerText = block.nombre || 'WOD';
+                var rInfo = (block.rondas || 1) + ' Rondas | ' +
+                    (block.trabajo_seg || 0) + 's Work | ' +
+                    (block.descanso_seg || 0) + 's Rest';
+                document.getElementById('block-subtitle').innerText = rInfo;
+
+                // Generar ejercicios separando por salto de linea
+                var ejHTML = '';
+                var ejerciciosTexto = block.ejercicios || '';
+                var lineas = ejerciciosTexto.split('\n');
+                for (var j = 0; j < lineas.length; j++) {
+                    if (lineas[j].trim() !== '') {
+                        ejHTML += '<div class="exercise-item">• ' + lineas[j] + '</div>';
+                    }
+                }
+                document.getElementById('exercise-list').innerHTML = ejHTML;
+            } else {
+                document.getElementById('block-title').innerText = 'VACÍO';
+                document.getElementById('block-subtitle').innerText = 'Agrega bloques en el panel';
+                document.getElementById('exercise-list').innerHTML = '';
+            }
+
+            // Kickstart Timer Loop
+            if (!timerInterval) {
+                timerInterval = setInterval(updateTimer, 100); // 100ms es muy safe para Android 4.4 y se ve fluido
+            }
+            updateTimer(); // force first paint
         };
 
-        // --- 3. Registrar Service Worker para Offline Fallback ---
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js').then(function(registration) {
-                    console.log('SW cache ready.');
-                }, function(err) {
-                    console.warn('SW failed.', err);
-                });
-            });
-        }
+        window.setServerTimeSync = function (serverTimestampString) {
+            if (hasSynced) return;
+            var localNow = Date.now();
+            var serverNow = new Date(serverTimestampString).getTime();
+            serverTimeOffset = serverNow - localNow;
+            hasSynced = true;
+            console.log("Reloj Sincronizado. Desfase Local vs Servidor: " + serverTimeOffset + "ms");
+
+            var overlay = document.getElementById('overlay-start');
+            if (overlay) overlay.innerHTML = "TOCAR PARA INICIAR<br><span style='font-size:3vw; color:#22c55e; margin-top:2vh'>(Sincronización Exitosa)</span>";
+        };
+
     </script>
-    <!-- Módulo Supabase que Vite transformará para ES5 usando plugin-legacy -->
     <script type="module" src="./main.js"></script>
 </body>
+
 </html>

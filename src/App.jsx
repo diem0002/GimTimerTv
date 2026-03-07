@@ -82,7 +82,7 @@ function App() {
                             <div>
                                 <div className="font-bold">{b.nombre}</div>
                                 <div className="text-sm text-slate-400">
-                                    {b.duracion_seg && `${Math.floor(b.duracion_seg / 60)}:${(b.duracion_seg % 60).toString().padStart(2, '0')} min`}
+                                    {b.rondas}x {Math.floor(b.trabajo_seg / 60)}:{(b.trabajo_seg % 60).toString().padStart(2, '0')} (Desc: {Math.floor(b.descanso_seg / 60)}:{(b.descanso_seg % 60).toString().padStart(2, '0')})
                                 </div>
                             </div>
                             <button onClick={() => handleDeleteBlock(i)} className="text-red-400 bg-slate-900 px-3 py-1 rounded text-sm hover:bg-slate-700">X</button>

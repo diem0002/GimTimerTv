@@ -2,20 +2,41 @@ import { useState } from 'react';
 import { Plus } from 'lucide-react';
 
 export default function BlockEditor({ onAdd }) {
-    const [nombre, setNombre] = useState('Fuerza / AMRAP');
-    const [minutos, setMinutos] = useState(10);
+    const [nombre, setNombre] = useState('AMRAP / EMOM');
+
+    // Trabajo
+    const [trabajoMin, setTrabajoMin] = useState(1);
+    const [trabajoSeg, setTrabajoSeg] = useState(0);
+
+    // Descanso
+    const [descansoMin, setDescansoMin] = useState(0);
+    const [descansoSeg, setDescansoSeg] = useState(0);
+
+    // Rondas
+    const [rondas, setRondas] = useState(1);
+
+    // Info
     const [ejercicios, setEjercicios] = useState('');
 
     const handleSubmit = (e) => {
         e.preventDefault();
+
         onAdd({
             nombre: nombre,
-            duracion_seg: parseInt(minutos) * 60,
-            ejercicio_actual: ejercicios || 'Empezar a trabajar' // Mostrar en la TV
+            rondas: parseInt(rondas) || 1,
+            trabajo_seg: (parseInt(trabajoMin) || 0) * 60 + (parseInt(trabajoSeg) || 0),
+            descanso_seg: (parseInt(descansoMin) || 0) * 60 + (parseInt(descansoSeg) || 0),
+            ejercicios: ejercicios || 'Empezar a trabajar' // Mostrar en la TV
         });
+
+        // Reset defaults
         setNombre('');
         setEjercicios('');
-        setMinutos(10);
+        setTrabajoMin(1);
+        setTrabajoSeg(0);
+        setDescansoMin(0);
+        setDescansoSeg(0);
+        setRondas(1);
     };
 
     return (
@@ -34,28 +55,56 @@ export default function BlockEditor({ onAdd }) {
                     />
                 </div>
 
-                <div className="flex gap-3">
-                    <div className="flex-1">
-                        <label className="block text-xs uppercase text-slate-400 mb-1">Minutos Trab. (Timecap)</label>
-                        <input
-                            type="number"
-                            required
-                            min="1"
-                            value={minutos}
-                            onChange={(e) => setMinutos(e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white text-center focus:outline-none focus:border-yellow-500"
-                        />
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-slate-900/50 p-2 rounded border border-slate-700">
+                        <label className="block text-xs font-bold text-slate-300 mb-2 border-b border-slate-700 pb-1">TRABAJO</label>
+                        <div className="flex gap-2">
+                            <div>
+                                <label className="block text-[10px] text-slate-500">Min</label>
+                                <input type="number" min="0" value={trabajoMin} onChange={(e) => setTrabajoMin(e.target.value)} required className="w-full bg-slate-950 border border-slate-600 rounded p-1 text-white text-center" />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] text-slate-500">Seg</label>
+                                <input type="number" min="0" max="59" value={trabajoSeg} onChange={(e) => setTrabajoSeg(e.target.value)} required className="w-full bg-slate-950 border border-slate-600 rounded p-1 text-white text-center" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-slate-900/50 p-2 rounded border border-slate-700">
+                        <label className="block text-xs font-bold text-slate-300 mb-2 border-b border-slate-700 pb-1">DESCANSO (Pauses)</label>
+                        <div className="flex gap-2">
+                            <div>
+                                <label className="block text-[10px] text-slate-500">Min</label>
+                                <input type="number" min="0" value={descansoMin} onChange={(e) => setDescansoMin(e.target.value)} required className="w-full bg-slate-950 border border-slate-600 rounded p-1 text-white text-center" />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] text-slate-500">Seg</label>
+                                <input type="number" min="0" max="59" value={descansoSeg} onChange={(e) => setDescansoSeg(e.target.value)} required className="w-full bg-slate-950 border border-slate-600 rounded p-1 text-white text-center" />
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <div>
-                    <label className="block text-xs uppercase text-slate-400 mb-1">Info TV (Ej: 21-15-9 Thrusters)</label>
+                    <label className="block text-xs uppercase text-slate-400 mb-1">Rondas (Vueltas)</label>
                     <input
-                        type="text"
+                        type="number"
+                        required
+                        min="1"
+                        value={rondas}
+                        onChange={(e) => setRondas(e.target.value)}
+                        className="w-1/3 bg-slate-900 border border-slate-600 rounded p-2 text-white text-center focus:outline-none focus:border-yellow-500"
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-xs uppercase text-slate-400 mb-1">Ejercicios TV (Uno por línea)</label>
+                    <textarea
+                        rows="4"
                         value={ejercicios}
                         onChange={(e) => setEjercicios(e.target.value)}
-                        placeholder="Texto pequeño en la TV..."
-                        className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white focus:outline-none focus:border-yellow-500"
+                        placeholder="21 Thrusters&#10;15 Pullups&#10;9 Burpees"
+                        className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white focus:outline-none focus:border-yellow-500 resize-none font-mono text-sm leading-tight"
                     />
                 </div>
 
