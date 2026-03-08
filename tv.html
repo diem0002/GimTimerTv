@@ -254,9 +254,6 @@
             var elapsedMs;
 
             if (currentWodState.estado_actual === 'PAUSED') {
-                // ESTADO: PAUSED
-                bodyEl.className = 'state-pausa';
-                statusEl.innerHTML = 'PAUSA';
                 // Si esta pausado, el tiempo transcurrido es el total menos el tiempo pausado restante
                 var blockTotalMs = ((currentBlock.trabajo_seg || 0) + (currentBlock.descanso_seg || 0)) * (currentBlock.rondas || 1) * 1000;
                 elapsedMs = blockTotalMs - currentWodState.tiempo_pausado_restante;
@@ -343,6 +340,12 @@
                     }
                     lastSecondsLeft = secondsLeft;
                 }
+            }
+
+            // Override visual final si está en pausa
+            if (currentWodState.estado_actual === 'PAUSED') {
+                bodyEl.className = 'state-pausa';
+                statusEl.innerHTML = 'PAUSA';
             }
 
             timerEl.innerHTML = formatTime(timeLeftMs);

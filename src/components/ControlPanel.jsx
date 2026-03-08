@@ -16,14 +16,13 @@ export default function ControlPanel({ dbState, sessionData }) {
             estado_actual: 'RUNNING'
         };
 
-        const COUNTDOWN_MS = 3000; // 3 Segundos de preparación universal
-
         if (estadoActual === 'PAUSED' && dbState.tiempo_pausado_restante) {
-            // Reanudamos desde la pausa
-            payload.start_timestamp = new Date(now.getTime() + COUNTDOWN_MS - (getTotalBlockTime() - dbState.tiempo_pausado_restante)).toISOString();
+            // Reanudamos desde la pausa. Compensamos los 3000ms de countdown de la TV
+            const elapsed_when_paused = getTotalBlockTime() - dbState.tiempo_pausado_restante;
+            payload.start_timestamp = new Date(now.getTime() - 3000 - elapsed_when_paused).toISOString();
         } else {
-            // Empezar de cero
-            payload.start_timestamp = new Date(now.getTime() + COUNTDOWN_MS).toISOString();
+            // Empezar de cero. No sumarle 3000ms, la TV ya se los resta sola para logar el countdown nativo.
+            payload.start_timestamp = now.toISOString();
             payload.tiempo_pausado_restante = null;
         }
 
@@ -34,17 +33,17 @@ export default function ControlPanel({ dbState, sessionData }) {
     const handlePause = async () => {
         if (!currentBlock || estadoActual !== 'RUNNING') return;
 
-        // Calcular cuánto tiempo faltaba para guardarlo
+        // Calcular cuánto tiempo faltaba usando la misma matemática de la TV
         const start = new Date(dbState.start_timestamp).getTime();
         const now = new Date().getTime();
-        const elapsed = now - start;
+        const elapsed = now - start - 3000; // -3000 por el countdown
         const total = getTotalBlockTime();
         const restante = total - elapsed;
 
         await supabase.from('wod_status').update({
             is_running: false,
             estado_actual: 'PAUSED',
-            tiempo_pausado_restante: restante > 0 ? restante : 0
+            tiempo_pausado_restante: restante
         }).eq('id', dbState.id);
     };
 
@@ -63,11 +62,10 @@ export default function ControlPanel({ dbState, sessionData }) {
     const handleRestart = async () => {
         if (!currentBlock) return;
         const now = new Date();
-        const COUNTDOWN_MS = 3000;
         await supabase.from('wod_status').update({
             is_running: true,
             estado_actual: 'RUNNING',
-            start_timestamp: new Date(now.getTime() + COUNTDOWN_MS).toISOString(),
+            start_timestamp: now.toISOString(),
             target_timestamp: null,
             tiempo_pausado_restante: null
         }).eq('id', dbState.id);
@@ -89,13 +87,10 @@ export default function ControlPanel({ dbState, sessionData }) {
         }).eq('id', dbState.id);
     };
 
-    // Util: Calculamos la duración total teórica del bloque (Trabajo + Descanso) x Rondas
-    // Restamos el último descanso porque no se descansa al final del bloque.
+    // Util: Calculamos la duración total teórica del bloque
     const getTotalBlockTime = () => {
         if (!currentBlock) return 0;
-        const totalConDescanso = ((currentBlock.trabajo_seg || 0) + (currentBlock.descanso_seg || 0)) * (currentBlock.rondas || 1);
-        const duracionReal = totalConDescanso - (currentBlock.descanso_seg || 0); // Omitimos el último descanso
-        return duracionReal * 1000;
+        return ((currentBlock.trabajo_seg || 0) + (currentBlock.descanso_seg || 0)) * (currentBlock.rondas || 1) * 1000;
     };
 
     return (
@@ -136,7 +131,7 @@ export default function ControlPanel({ dbState, sessionData }) {
 
                 <button onClick={handleSkip} disabled={sessionData.bloques.length === 0} className="bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-lg flex flex-col items-center justify-center gap-1 opacity-90 disabled:opacity-30">
                     <SkipForward size={20} />
-                    <span className="text-[10px] uppercase font-bold">Skip >></span>
+                    <span className="text-[10px] uppercase font-bold">Skip &gt;&gt;</span>
                 </button>
             </div>
         </div>
