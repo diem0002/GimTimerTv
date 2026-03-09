@@ -101,25 +101,28 @@ function App() {
                 <h2 className="text-xl font-semibold mb-4 border-l-4 border-slate-600 pl-2">Bloques de la Clase ({sessionData.bloques.length})</h2>
 
                 <div className="space-y-3 mb-6">
-                    {sessionData.bloques.map((b, i) => (
-                        <div key={i} className={`p-3 rounded bg-slate-800 border ${dbState?.current_block_index === i ? 'border-yellow-400' : 'border-slate-700'} flex justify-between items-center`}>
-                            <div>
-                                <div className="font-bold">{b.nombre}</div>
-                                <div className="text-sm text-slate-400">
-                                    {b.rondas}x {Math.floor(b.trabajo_seg / 60)}:{(b.trabajo_seg % 60).toString().padStart(2, '0')} (Desc: {Math.floor(b.descanso_seg / 60)}:{(b.descanso_seg % 60).toString().padStart(2, '0')})
+                    {sessionData.bloques.map((b, i) => {
+                        if (!b) return null;
+                        return (
+                            <div key={i} className={`p-3 rounded bg-slate-800 border ${dbState?.current_block_index === i ? 'border-yellow-400' : 'border-slate-700'} flex justify-between items-center`}>
+                                <div>
+                                    <div className="font-bold">{b.nombre}</div>
+                                    <div className="text-sm text-slate-400">
+                                        {b.rondas}x {Math.floor(b.trabajo_seg / 60)}:{(b.trabajo_seg % 60).toString().padStart(2, '0')} (Desc: {Math.floor(b.descanso_seg / 60)}:{(b.descanso_seg % 60).toString().padStart(2, '0')})
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    {dbState?.current_block_index !== i && (
+                                        <button onClick={() => handleSelectBlock(i)} className="text-green-400 bg-slate-900 px-3 py-1 rounded text-sm hover:bg-slate-700 font-bold transition-colors">
+                                            ▶ FIJAR
+                                        </button>
+                                    )}
+                                    <button onClick={() => handleEditBlock(i)} className="text-blue-400 bg-slate-900 px-3 py-1 rounded text-sm hover:bg-slate-700">✎</button>
+                                    <button onClick={() => handleDeleteBlock(i)} className="text-red-400 bg-slate-900 px-3 py-1 rounded text-sm hover:bg-slate-700">X</button>
                                 </div>
                             </div>
-                            <div className="flex gap-2">
-                                {dbState?.current_block_index !== i && (
-                                    <button onClick={() => handleSelectBlock(i)} className="text-green-400 bg-slate-900 px-3 py-1 rounded text-sm hover:bg-slate-700 font-bold transition-colors">
-                                        ▶ FIJAR
-                                    </button>
-                                )}
-                                <button onClick={() => handleEditBlock(i)} className="text-blue-400 bg-slate-900 px-3 py-1 rounded text-sm hover:bg-slate-700">✎</button>
-                                <button onClick={() => handleDeleteBlock(i)} className="text-red-400 bg-slate-900 px-3 py-1 rounded text-sm hover:bg-slate-700">X</button>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                     {sessionData.bloques.length === 0 && (
                         <p className="text-slate-500 italic text-center py-4">No hay bloques armados aún.</p>
                     )}
